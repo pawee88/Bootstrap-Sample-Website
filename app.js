@@ -6,8 +6,14 @@ const https = require("https");
 const exphbs = require("express-handlebars");
 const nodemailer = require("nodemailer");
 const { getMaxListeners } = require("process");
+const { prototype } = require("nodemailer/lib/dkim");
+require('dotenv').config();
+
+
 
 const app = express();
+
+const PORT = process.env.PORT || 3000
 
 app.use(express.static("public"));
 
@@ -18,23 +24,23 @@ app.set('view engine', 'handlebars');
 
 //Body Parser Middleware
 
-app.use(bodyParser.urlencoded({extended: true}));
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 
 
-app.get("/", function(req, res){
+app.get("/", function (req, res) {
     res.sendFile(__dirname + "/index.html")
 });
 
-app.get("/", function(req, res){
+app.get("/", function (req, res) {
     res.render('contact');
 });
 
 
 //Contact form
 
-app.post('/send', function(req, res){
+app.post('/send', function (req, res) {
     const output = `
      <p>You have a new contact request</p>
      <h3>Contact Details</h3>
@@ -52,55 +58,56 @@ app.post('/send', function(req, res){
     `;
 
     // create reusable transporter object using the default SMTP transport
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 587,
-    secure: false, // true for 465, false for other ports
-    auth: {
-      user: 'techproweb.dev@gmail.com', // generated ethereal user
-      pass: 'Lenovoy430.', // generated ethereal password
-    },
+    const emailPassword = process.env.PASSWORD
+    const transporter = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false, // true for 465, false for other ports
+        auth: {
+            user: 'techproweb.dev@gmail.com', // generated ethereal user
+            pass: emailPassword, // generated ethereal password
+        },
 
-    tls:{
-        rejectUnauthorized: false
-    }
-  });
+        tls: {
+            rejectUnauthorized: false
+        }
+    });
 
-  
-  let mailOptions = {
-    from: 'NodeMailer Contact <techproweb.dev@gmail.com>', // sender address
-    to: "techproecom@gmail.com", // list of receivers
-    subject: "Node Contact Form Request", // Subject line
-    text: "Hello world?", // plain text body
-    html: output
-  };
 
-  transporter.sendMail(mailOptions, (err, data) => {
-    if (err) {
-      console.log(err);
-      res.status(500).send("Something went wrong.");
-    } else {
-        res.sendFile(__dirname + "/success-contact.html")
-    }
-});
+    let mailOptions = {
+        from: 'NodeMailer Contact <techproweb.dev@gmail.com>', // sender address
+        to: "techproecom@gmail.com", // list of receivers
+        subject: "Node Contact Form Request", // Subject line
+        text: "Hello world?", // plain text body
+        html: output
+    };
+
+    transporter.sendMail(mailOptions, (err, data) => {
+        if (err) {
+            console.log(err);
+            res.status(500).send("Something went wrong.");
+        } else {
+            res.sendFile(__dirname + "/success-contact.html")
+        }
+    });
 
 });
 
 
 // signup page route
 
-app.post("/signup.html", function(req, res){
+app.post("/signup.html", function (req, res) {
     const fName = req.body.firstName;
     const lName = req.body.lastName;
     const email = req.body.email;
 
-    const data ={
-        members:[
+    const data = {
+        members: [
             {
                 email_address: email,
                 status: "subscribed",
                 merge_fields: {
-                    FNAME: fName, 
+                    FNAME: fName,
                     LNAME: lName
                 }
             }
@@ -116,16 +123,16 @@ app.post("/signup.html", function(req, res){
         auth: "pao1:936fad1e30359a262825dabe5e347161-us6"
     }
 
-    const request = https.request(url, options, function(response){
+    const request = https.request(url, options, function (response) {
 
-        if(response.statusCode === 200){
+        if (response.statusCode === 200) {
             res.sendFile(__dirname + "/success.html")
-        }else{
+        } else {
             res.sendFile(__dirname + "/failure.html")
         }
 
 
-        response.on("data", function(data){
+        response.on("data", function (data) {
             console.log(JSON.parse(data));
         })
     });
@@ -135,36 +142,36 @@ app.post("/signup.html", function(req, res){
 });
 
 //Signup back to homepage
-app.post("/index", function(req, res){
+app.post("/index", function (req, res) {
     res.sendFile(__dirname + "/index.html")
 });
 
 
 // Failure route
 
-app.post("/failure", function(req, res){
+app.post("/failure", function (req, res) {
     res.sendFile(__dirname + "/signup.html")
 });
 
 // Success to Homepage route
 
-app.post("/success", function(req, res){
+app.post("/success", function (req, res) {
     res.sendFile(__dirname + "/index.html")
 });
 
-app.post("/success-contact", function(req, res){
+app.post("/success-contact", function (req, res) {
     res.sendFile(__dirname + "/index.html")
 });
 
 
 // Footer sign-up
-app.post("/signup", function(req, res){
+app.post("/signup", function (req, res) {
     res.sendFile(__dirname + "/signup.html")
 });
 
 
 
 
-app.listen(3000, function(){
-    console.log("Server has started");
+app.listen(PORT, function () {
+    console.log(`Server has start at port ${3000}`);
 });
