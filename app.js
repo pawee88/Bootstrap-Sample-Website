@@ -8,6 +8,11 @@ const nodemailer = require("nodemailer");
 const { getMaxListeners } = require("process");
 const { prototype } = require("nodemailer/lib/dkim");
 require('dotenv').config();
+const session = require('express-session');
+const flash = require('connect-flash');
+const ejs = require('ejs');
+const Swal = require('sweetalert2');
+
 
 
 
@@ -20,22 +25,38 @@ app.use(express.static("public"));
 //View engine setup
 
 app.engine('handlebars', exphbs());
-app.set('view engine', 'handlebars');
+app.set('view engine', 'ejs');
 
 //Body Parser Middleware
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
+//init session
 
+app.use(session({
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+        maxAge: 60000
+    }
+
+})
+);
+
+app.use(flash());
 
 app.get("/", function (req, res) {
-    res.sendFile(__dirname + "/index.html")
+    res.render('index')
 });
 
-app.get("/", function (req, res) {
-    res.render('contact');
-});
+
+
+// app.get("/", function (req, res) {
+//     const message = req.flash('message', 'saved successfully')
+//     res.render('/index', { message });
+// });
 
 
 //Contact form
@@ -85,88 +106,95 @@ app.post('/send', function (req, res) {
     transporter.sendMail(mailOptions, (err, data) => {
         if (err) {
             console.log(err);
-            res.status(500).send("Something went wrong.");
+            res.status(500).send(err);
         } else {
-            res.sendFile(__dirname + "/success-contact.html")
+            res.render('success-contact')
+            // res.render('index').send(Swal.fire('Any fool can use a computer'));
+
         }
     });
 
 });
 
 
+
+
+
+
 // signup page route
 
-app.post("/signup.html", function (req, res) {
-    const fName = req.body.firstName;
-    const lName = req.body.lastName;
-    const email = req.body.email;
+app.post('/signup', (req, res) => {
+    const { firstName, lastName, email } = req.body;
+
+    if (!firstName || !lastName || !email) {
+        res.render('failure');
+    }
 
     const data = {
         members: [
             {
                 email_address: email,
-                status: "subscribed",
+                status: 'subscribed',
                 merge_fields: {
-                    FNAME: fName,
-                    LNAME: lName
+                    FNAME: firstName,
+                    LNAME: lastName
                 }
             }
         ]
-    };
-
-    const jsonData = JSON.stringify(data);
-
-    const url = "https://us6.api.mailchimp.com/3.0/lists/42c5b7bb4f";
-
+    }
+    const url = process.env.URL
+    const api = process.env.API
+    const postData = JSON.stringify(data);
     const options = {
-        method: "POST",
-        auth: "pao1:936fad1e30359a262825dabe5e347161-us6"
+        url: url,
+        method: 'POST',
+        headers: {
+            authorization: api
+        },
+        body: postData
     }
 
-    const request = https.request(url, options, function (response) {
-
-        if (response.statusCode === 200) {
-            res.sendFile(__dirname + "/success.html")
+    request(options, (error, response, body) => {
+        if (error) {
+            res.render('failure');
         } else {
-            res.sendFile(__dirname + "/failure.html")
+            if (response.statusCode === 200) {
+                res.render('success');
+            } else {
+                res.render('failure');
+            }
         }
-
-
-        response.on("data", function (data) {
-            console.log(JSON.parse(data));
-        })
     });
-
-    // request.write(jsonData);
-    request.end()
 });
+
+
 
 //Signup back to homepage
 app.post("/index", function (req, res) {
-    res.sendFile(__dirname + "/index.html")
+    res.render('index');
 });
 
 
 // Failure route
 
 app.post("/failure", function (req, res) {
-    res.sendFile(__dirname + "/signup.html")
+    res.render('signup')
 });
 
 // Success to Homepage route
 
 app.post("/success", function (req, res) {
-    res.sendFile(__dirname + "/index.html")
+    res.render('index')
 });
 
 app.post("/success-contact", function (req, res) {
-    res.sendFile(__dirname + "/index.html")
+    res.render('index');
 });
 
 
 // Footer sign-up
-app.post("/signup", function (req, res) {
-    res.sendFile(__dirname + "/signup.html")
+app.post("/newsletter", function (req, res) {
+    res.render('newsletter')
 });
 
 
